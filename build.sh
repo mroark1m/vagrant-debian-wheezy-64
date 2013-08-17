@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 # make sure we have dependencies
 hash mkisofs 2>/dev/null || { echo >&2 "ERROR: mkisofs not found.  Aborting."; exit 1; }
@@ -11,9 +11,9 @@ set -o errexit
 #set -o xtrace
 
 # Configurations
-BOX="debian-wheezy-64"
-ISO_URL="http://cdimage.debian.org/debian-cd/7.1.0/amd64/iso-cd/debian-7.1.0-amd64-netinst.iso"
-ISO_MD5="80f498a1f9daa76bc911ae13692e4495"
+BOX="debian-testing-64"
+ISO_URL="http://cdimage.debian.org/cdimage/daily-builds/daily/arch-latest/amd64/iso-cd/debian-testing-amd64-netinst.iso"
+ISO_MD5="d0aa87175147b37b6a7d7c5686997add"
 
 # location, location, location
 FOLDER_BASE=`pwd`
@@ -42,6 +42,14 @@ fi
 if [ -f "${FOLDER_BASE}/package.box" ]; then
   echo "Removing old package.box ..."
   rm "${FOLDER_BASE}/package.box"
+fi
+if VBoxManage showvminfo "${BOX}" >/dev/null 2>/dev/null; then
+    echo "Unregistering vm ..."
+    VBoxManage unregistervm "${BOX}"
+fi
+if [ -f "${FOLDER_ISO}/custom.iso" ]; then
+  echo "Removing custom iso ..."
+  rm "${FOLDER_ISO}/custom.iso"
 fi
 
 # Setting things back up again

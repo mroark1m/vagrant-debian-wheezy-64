@@ -1,5 +1,7 @@
 ## About
 
+## Notice this versio of this project creates a "testing" image, not a "wheezy" image!!! Ignore indications below to the contrary.
+
 This script will:
 
  1. download the `Debian 7.1 "Wheezy"` server, 64bit iso
