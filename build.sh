@@ -194,7 +194,8 @@ if ! VBoxManage showvminfo "${BOX}" >/dev/null 2>/dev/null; then
     --type hdd \
     --medium "${FOLDER_VBOX}/${BOX}/${BOX}.vdi"
 
-  VBoxManage startvm "${BOX}" --type headless
+  #VBoxManage startvm "${BOX}" --type headless
+  VBoxManage startvm "${BOX}" 
 
   echo -n "Waiting for installer to finish "
   while VBoxManage list runningvms | grep "${BOX}" >/dev/null; do
