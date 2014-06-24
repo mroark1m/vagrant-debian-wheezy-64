@@ -24,7 +24,8 @@ set -o errexit
 # Configurations
 BOX="debian-testing-64"
 ISO_URL="http://cdimage.debian.org/cdimage/daily-builds/daily/arch-latest/amd64/iso-cd/debian-testing-amd64-netinst.iso"
-ISO_MD5="270bdcbae5e5388c55aa8d0844506686"
+ISO_MD5_URL="http://cdimage.debian.org/cdimage/daily-builds/daily/arch-latest/amd64/iso-cd/MD5SUMS.small"
+#ISO_MD5="270bdcbae5e5388c55aa8d0844506686"
 
 # location, location, location
 FOLDER_BASE=$(pwd)
@@ -97,6 +98,7 @@ mkdir -p "${FOLDER_ISO_CUSTOM}"
 mkdir -p "${FOLDER_ISO_INITRD}"
 
 ISO_FILENAME="${FOLDER_ISO}/`basename ${ISO_URL}`"
+ISO_MD5_FILENAME="${FOLDER_ISO}/MD5SUMS.small"
 INITRD_FILENAME="${FOLDER_ISO}/initrd.gz"
 
 # download the installation disk if you haven't already or it is corrupted somehow
@@ -105,8 +107,13 @@ if [ ! -e "${ISO_FILENAME}" ]; then
   curl --output "${ISO_FILENAME}" -L "${ISO_URL}"
 fi
 
+# download the md5checksum
+echo "Downloading `basename ${ISO_MD5_URL}` ..."
+curl --output "${ISO_MD5_FILENAME}" -L "${ISO_MD5_URL}"
+
 # make sure download is right...
 ISO_HASH=$($MD5 "${ISO_FILENAME}" | cut -d ' ' -f 1)
+ISO_MD5=$(cat "${ISO_MD5_FILENAME}" | cut -d ' ' -f 1)
 if [ "${ISO_MD5}" != "${ISO_HASH}" ]; then
   echo "ERROR: MD5 does not match. Got ${ISO_HASH} instead of ${ISO_MD5}. Aborting."
   exit 1
