@@ -4,6 +4,7 @@
 hash vagrant 2>/dev/null || { echo >&2 "ERROR: vagrant not found.  Aborting."; exit 1; }
 hash VBoxManage 2>/dev/null || { echo >&2 "ERROR: VBoxManage not found.  Aborting."; exit 1; }
 hash 7z 2>/dev/null || { echo >&2 "ERROR: 7z not found. Aborting."; exit 1; }
+hash curl 2>/dev/null || { echo >&2 "ERROR: curl not found. Aborting."; exit 1; }
 
 VBOX_VERSION="$(VBoxManage --version)"
 
@@ -26,12 +27,29 @@ ISO_URL="http://cdimage.debian.org/cdimage/daily-builds/daily/arch-latest/amd64/
 ISO_MD5="270bdcbae5e5388c55aa8d0844506686"
 
 # location, location, location
-FOLDER_BASE=`pwd`
+FOLDER_BASE=$(pwd)
 FOLDER_ISO="${FOLDER_BASE}/iso"
 FOLDER_BUILD="${FOLDER_BASE}/build"
 FOLDER_VBOX="${FOLDER_BUILD}/vbox"
 FOLDER_ISO_CUSTOM="${FOLDER_BUILD}/iso/custom"
 FOLDER_ISO_INITRD="${FOLDER_BUILD}/iso/initrd"
+
+# Env option: Use headless mode or GUI
+VM_GUI="${VM_GUI:-}"
+if [ "x${VM_GUI}" == "xyes" ] || [ "x${VM_GUI}" == "x1" ]; then
+  STARTVM="VBoxManage startvm ${BOX}"
+else
+  STARTVM="VBoxManage startvm ${BOX} --type headless"
+fi
+STOPVM="VBoxManage controlvm ${BOX} poweroff"
+
+# Env option: Use custom preseed.cfg or default
+DEFAULT_PRESEED="preseed.cfg"
+PRESEED="${PRESEED:-"$DEFAULT_PRESEED"}"
+
+# Env option: Use custom late_command.sh or default
+DEFAULT_LATE_CMD="${FOLDER_BASE}/late_command.sh"
+LATE_CMD="${LATE_CMD:-"$DEFAULT_LATE_CMD"}"
 
 # Parameter changes from 4.2 to 4.3
 if [[ "$VBOX_VERSION" < 4.3 ]]; then
@@ -40,14 +58,23 @@ else
   PORTCOUNT="--portcount 1"
 fi
 
-if [ $OSTYPE = "linux-gnu" ];
-then
+if [ "$OSTYPE" = "linux-gnu" ]; then
   MD5="md5sum"
+elif [ "$OSTYPE" = "msys" ]; then
+  MD5="md5 -l"
 else
   MD5="md5 -q"
 fi
 
 # start with a clean slate
+if VBoxManage list runningvms | grep "${BOX}" >/dev/null 2>&1; then
+  echo "Stopping vm ..."
+  ${STOPVM}
+fi
+if VBoxManage showvminfo "${BOX}" >/dev/null 2>&1; then
+  echo "Unregistering vm ..."
+  VBoxManage unregistervm "${BOX}" --delete
+fi
 if [ -d "${FOLDER_BUILD}" ]; then
   echo "Cleaning build directory ..."
   chmod -R u+w "${FOLDER_BUILD}"
@@ -60,10 +87,6 @@ fi
 if [ -f "${FOLDER_BASE}/${BOX}.box" ]; then
   echo "Removing old ${BOX}.box" ...
   rm "${FOLDER_BASE}/${BOX}.box"
-fi
-if VBoxManage showvminfo "${BOX}" >/dev/null 2>/dev/null; then
-  echo "Unregistering vm ..."
-  VBoxManage unregistervm "${BOX}" --delete
 fi
 
 # Setting things back up again
@@ -83,7 +106,7 @@ if [ ! -e "${ISO_FILENAME}" ]; then
 fi
 
 # make sure download is right...
-ISO_HASH=`$MD5 "${ISO_FILENAME}" | cut -d ' ' -f 1`
+ISO_HASH=$($MD5 "${ISO_FILENAME}" | cut -d ' ' -f 1)
 if [ "${ISO_MD5}" != "${ISO_HASH}" ]; then
   echo "ERROR: MD5 does not match. Got ${ISO_HASH} instead of ${ISO_MD5}. Aborting."
   exit 1
@@ -112,9 +135,16 @@ if [ ! -e "${FOLDER_ISO}/custom.iso" ]; then
   # stick in our new initrd.gz
   echo "Installing new initrd.gz ..."
   cd "${FOLDER_ISO_INITRD}"
-  gunzip -c "${FOLDER_ISO_CUSTOM}/install/initrd.gz.org" | cpio -id || true
+  if [ "$OSTYPE" = "msys" ]; then
+    gunzip -c "${FOLDER_ISO_CUSTOM}/install/initrd.gz.org" | cpio -i --make-directories || true
+  else
+    gunzip -c "${FOLDER_ISO_CUSTOM}/install/initrd.gz.org" | cpio -id || true
+  fi
   cd "${FOLDER_BASE}"
-  cp preseed.cfg "${FOLDER_ISO_INITRD}/preseed.cfg"
+  if [ "${PRESEED}" != "${DEFAULT_PRESEED}" ] ; then
+    echo "Using custom preseed file ${PRESEED}"
+  fi
+  cp "${PRESEED}" "${FOLDER_ISO_INITRD}/preseed.cfg"
   cd "${FOLDER_ISO_INITRD}"
   find . | cpio --create --format='newc' | gzip  > "${FOLDER_ISO_CUSTOM}/install/initrd.gz"
 
@@ -133,10 +163,10 @@ if [ ! -e "${FOLDER_ISO}/custom.iso" ]; then
   # add late_command script
   echo "Add late_command script ..."
   chmod u+w "${FOLDER_ISO_CUSTOM}"
-  cp "${FOLDER_BASE}/late_command.sh" "${FOLDER_ISO_CUSTOM}"
+  cp "${LATE_CMD}" "${FOLDER_ISO_CUSTOM}/late_command.sh"
 
   echo "Running mkisofs ..."
-  $MKISOFS -r -V "Custom Debian Install CD" \
+  "$MKISOFS" -r -V "Custom Debian Install CD" \
     -cache-inodes -quiet \
     -J -l -b isolinux/isolinux.bin \
     -c isolinux/boot.cat -no-emul-boot \
@@ -146,7 +176,7 @@ fi
 
 echo "Creating VM Box..."
 # create virtual machine
-if ! VBoxManage showvminfo "${BOX}" >/dev/null 2>/dev/null; then
+if ! VBoxManage showvminfo "${BOX}" >/dev/null 2>&1; then
   VBoxManage createvm \
     --name "${BOX}" \
     --ostype Debian_64 \
@@ -194,8 +224,7 @@ if ! VBoxManage showvminfo "${BOX}" >/dev/null 2>/dev/null; then
     --type hdd \
     --medium "${FOLDER_VBOX}/${BOX}/${BOX}.vdi"
 
-  #VBoxManage startvm "${BOX}" --type headless
-  VBoxManage startvm "${BOX}" 
+  ${STARTVM}
 
   echo -n "Waiting for installer to finish "
   while VBoxManage list runningvms | grep "${BOX}" >/dev/null; do
@@ -203,6 +232,13 @@ if ! VBoxManage showvminfo "${BOX}" >/dev/null 2>/dev/null; then
     echo -n "."
   done
   echo ""
+
+  VBoxManage storageattach "${BOX}" \
+    --storagectl "IDE Controller" \
+    --port 1 \
+    --device 0 \
+    --type dvddrive \
+    --medium emptydrive
 fi
 
 echo "Building Vagrant Box ..."

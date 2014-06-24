@@ -13,8 +13,8 @@ chown -R vagrant:vagrant /home/vagrant/.ssh
 # speed up ssh
 echo "UseDNS no" >> /etc/ssh/sshd_config
 
-# get chef
-#gem install chef --no-rdoc --no-ri
+# Install chef from omnibus
+#curl -L https://www.getchef.com/chef/install.sh | bash
 
 # display login prompt after boot
 sed "s/quiet splash//" /etc/default/grub > /tmp/grub
@@ -23,3 +23,7 @@ update-grub
 
 # clean up
 apt-get clean
+
+# Zero free space to aid VM compression
+dd if=/dev/zero of=/EMPTY bs=1M
+rm -f /EMPTY
