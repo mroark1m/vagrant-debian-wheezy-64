@@ -115,8 +115,13 @@ curl --output "${ISO_MD5_FILENAME}" -L "${ISO_MD5_URL}"
 ISO_HASH=$($MD5 "${ISO_FILENAME}" | cut -d ' ' -f 1)
 ISO_MD5=$(cat "${ISO_MD5_FILENAME}" | cut -d ' ' -f 1)
 if [ "${ISO_MD5}" != "${ISO_HASH}" ]; then
-  echo "ERROR: MD5 does not match. Got ${ISO_HASH} instead of ${ISO_MD5}. Aborting."
-  exit 1
+  echo "Getting new iso"
+  curl --output "${ISO_FILENAME}" -L "${ISO_URL}"
+  ISO_HASH=$($MD5 "${ISO_FILENAME}" | cut -d ' ' -f 1)
+  if [ "${ISO_MD5}" != "${ISO_HASH}" ]; then
+    echo "ERROR: New ISO has wrong hash after download."
+    exit 1
+  fi
 fi
 
 # customize it

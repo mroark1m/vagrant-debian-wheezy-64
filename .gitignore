@@ -1,8 +1,7 @@
 build/
 test/
 iso/
-
+vagrant/
 .DS_Store
-
 *.box
 *.sw?
