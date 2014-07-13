@@ -102,21 +102,22 @@ ISO_MD5_FILENAME="${FOLDER_ISO}/MD5SUMS.small"
 INITRD_FILENAME="${FOLDER_ISO}/initrd.gz"
 
 # download the installation disk if you haven't already or it is corrupted somehow
-echo "Downloading `basename ${ISO_URL}` ..."
 if [ ! -e "${ISO_FILENAME}" ]; then
-  curl --output "${ISO_FILENAME}" -L "${ISO_URL}"
+  echo "Downloading `basename ${ISO_URL}` ..."
+  curl -s --output "${ISO_FILENAME}" -L "${ISO_URL}"
 fi
 
 # download the md5checksum
 echo "Downloading `basename ${ISO_MD5_URL}` ..."
-curl --output "${ISO_MD5_FILENAME}" -L "${ISO_MD5_URL}"
+curl -s --output "${ISO_MD5_FILENAME}" -L "${ISO_MD5_URL}"
 
 # make sure download is right...
 ISO_HASH=$($MD5 "${ISO_FILENAME}" | cut -d ' ' -f 1)
 ISO_MD5=$(cat "${ISO_MD5_FILENAME}" | cut -d ' ' -f 1)
 if [ "${ISO_MD5}" != "${ISO_HASH}" ]; then
-  echo "Getting new iso"
-  curl --output "${ISO_FILENAME}" -L "${ISO_URL}"
+  echo Expected "${ISO_MD5}" does not equal "${ISO_HASH}" we got
+  echo "Downloading `basename ${ISO_URL}` ..."
+  curl -s --output "${ISO_FILENAME}" -L "${ISO_URL}"
   ISO_HASH=$($MD5 "${ISO_FILENAME}" | cut -d ' ' -f 1)
   if [ "${ISO_MD5}" != "${ISO_HASH}" ]; then
     echo "ERROR: New ISO has wrong hash after download."
@@ -129,7 +130,7 @@ echo "Creating Custom ISO"
 if [ ! -e "${FOLDER_ISO}/custom.iso" ]; then
 
   echo "Using 7zip"
-  7z x "${ISO_FILENAME}" -o"${FOLDER_ISO_CUSTOM}"
+  7z x "${ISO_FILENAME}" -o"${FOLDER_ISO_CUSTOM}" | tail 
 
   # If that didn't work, you have to update p7zip
   if [ ! -e $FOLDER_ISO_CUSTOM ]; then
