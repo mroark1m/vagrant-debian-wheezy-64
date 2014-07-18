@@ -239,8 +239,22 @@ if ! VBoxManage showvminfo "${BOX}" >/dev/null 2>&1; then
 
   ${STARTVM}
 
+  VM_START_WAIT_MINUTES="${VM_START_WAIT_MINUTES:-25}"
+  VM_START_TIME=`date +%s`
+
   echo -n "Waiting for installer to finish "
   while VBoxManage list runningvms | grep "${BOX}" >/dev/null; do
+    VM_CURRENT_TIME=`date +%s`
+    VM_ELAPSED_MINUTES=`echo "( $VM_CURRENT_TIME - $VM_START_TIME ) / 60" | bc`
+    if [ $VM_ELAPSED_MINUTES -ge $VM_START_WAIT_MINUTES ]; then
+	echo
+	echo "Giving up on installer, mailing screenshot."
+        vboxmanage controlvm "${BOX}" screenshotpng /tmp/foo.png
+        mailx -a /tmp/foo.png  -s "Failure Screen"  root < /dev/null
+	echo "Savestate for future investigation."
+	VBoxManage controlvm "${BOX}" savestate
+	exit 1
+    fi
     sleep 20
     echo -n "."
   done
