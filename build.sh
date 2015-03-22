@@ -24,7 +24,8 @@ set -o errexit
 # Configurations
 BOX="debian-testing-64"
 ISO_URL="http://cdimage.debian.org/cdimage/daily-builds/daily/arch-latest/amd64/iso-cd/debian-testing-amd64-netinst.iso"
-ISO_MD5_URL="http://cdimage.debian.org/cdimage/daily-builds/daily/arch-latest/amd64/iso-cd/MD5SUMS.small"
+#ISO_MD5_URL="http://cdimage.debian.org/cdimage/daily-builds/daily/arch-latest/amd64/iso-cd/MD5SUMS.small"
+ISO_MD5_URL="http://cdimage.debian.org/cdimage/daily-builds/daily/arch-latest/amd64/iso-cd/MD5SUMS"
 #ISO_MD5="270bdcbae5e5388c55aa8d0844506686"
 
 # location, location, location

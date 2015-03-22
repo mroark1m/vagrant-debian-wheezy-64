@@ -15,7 +15,7 @@ vagrant box add debian-testing-ci debian-testing-64.box
 pushd vagrant
 vagrant up
 set +e
-vagrant ssh default -c "ls /"
+vagrant ssh default -c "ls /mymirror/foo"
 SUCCESS=$?
 vagrant destroy -f
 echo success? $SUCCESS
